@@ -27,6 +27,20 @@ class State
 
   STATE_HASH = STATES.inject({}) { |h, state| h[state.name] = state; h }
 
+  class StateTransitions
+    ALLOWED_HASH = {
+      State::STATE_審査中     => Set.new([State::STATE_承認済, State::STATE_差し戻し中]),
+      State::STATE_差し戻し中 => Set.new([State::STATE_審査中, State::STATE_終了]),
+      State::STATE_承認済     => Set.new([State::STATE_実施中, State::STATE_終了]),
+      State::STATE_実施中     => Set.new([State::STATE_中断中, State::STATE_終了]),
+      State::STATE_中断中     => Set.new([State::STATE_実施中, State::STATE_終了]),
+    }
+
+    def can_transit?(from, to)
+      ALLOWED_HASH[from].include?(to)
+    end
+  end
+
   class << self
     def values
       STATES
@@ -37,30 +51,18 @@ class State
     end
   end
 
-end
-
-class StateTransitions
-  ALLOWED_HASH = {
-    State::STATE_審査中     => Set.new([State::STATE_承認済, State::STATE_差し戻し中]),
-    State::STATE_差し戻し中 => Set.new([State::STATE_審査中, State::STATE_終了]),
-    State::STATE_承認済     => Set.new([State::STATE_実施中, State::STATE_終了]),
-    State::STATE_実施中     => Set.new([State::STATE_中断中, State::STATE_終了]),
-    State::STATE_中断中     => Set.new([State::STATE_実施中, State::STATE_終了]),
-  }
-
-  def can_transit(from, to)
-    ALLOWED_HASH[from].include?(to)
+  def can_transit?(to)
+    StateTransitions.new.can_transit?(self, to)
   end
+
 end
+
 
 def main
-  transition = StateTransitions.new
-
   print '審査中 => 承認済 : '
-  puts transition.can_transit(State.value_of('審査中'), State.value_of('承認済'))
-  print '審査中 => 実施中 : '
-  puts transition.can_transit(State.value_of('審査中'), State.value_of('実施中'))
-
+  puts State.value_of('審査中').can_transit?(State.value_of('承認済'))
+  print '審査中 => 承認済 : '
+  puts State.value_of('審査中').can_transit?(State.value_of('実施中'))
 end
 
 case $PROGRAM_NAME
@@ -69,4 +71,4 @@ when __FILE__
 end
 
 # >> 審査中 => 承認済 : true
-# >> 審査中 => 実施中 : false
+# >> 審査中 => 承認済 : false
